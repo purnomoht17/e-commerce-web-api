@@ -1,0 +1,19 @@
+.
+├── package-lock.json
+├── package.json
+├── prisma
+│   └── schema.prisma
+├── src
+│   ├── app.js
+│   ├── application
+│   ├── controller
+│   ├── error
+│   ├── generated
+│   │   └── prisma
+│   ├── middleware
+│   ├── route
+│   ├── service
+│   └── validation
+└── struktur_proyek.txt
+
+12 directories, 5 files

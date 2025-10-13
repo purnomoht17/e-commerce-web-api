@@ -1,0 +1,242 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  CUSTOMER
+}
+
+model User {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  email    String  @unique
+  password String
+  name     String?
+
+  role     Role    @default(CUSTOMER)
+  isActive Boolean @default(true)
+
+  addresses Address[]
+  cart      ShoppingCart?
+  orders    Order[]
+  reviews   Review[]
+
+  createdProducts Product[] @relation("CreatedProducts")
+  updatedProducts Product[] @relation("UpdatedProducts")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  name             String
+  slug             String  @unique
+  description      String
+  shortDescription String?
+
+  price       Float
+  stock       Int      @default(0)
+  isAvailable Boolean  @default(true)
+  thumbnail   String
+  images      String[]
+
+  categoryId String   @db.ObjectId
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  totalReviews  Int   @default(0)
+  averageRating Float @default(0.0)
+
+  reviews Review[]
+
+  cartItems CartItem[]
+
+  createdById String  @db.ObjectId
+  createdBy   User    @relation("CreatedProducts", fields: [createdById], references: [id])
+  updatedById String? @db.ObjectId
+  updatedBy   User?   @relation("UpdatedProducts", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ShoppingCart {
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String     @unique @db.ObjectId
+  user       User       @relation(fields: [userId], references: [id])
+  totalPrice Float      @default(0.0)
+  items      CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  productId String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+
+  cartId String       @db.ObjectId
+  cart   ShoppingCart @relation(fields: [cartId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  FAILED
+}
+
+type AddressDetails {
+  recipientName String
+  phone         String
+  label         String?
+
+  fullAddress String // Alamat lengkap (jalan, no rumah, RT/RW)
+  subdistrict String // Kelurahan/Desa
+  district    String // Kecamatan
+  city        String // Kota/Kabupaten
+  province    String // Provinsi
+  postalCode  String // Wajib!
+
+  latitude  Float?
+  longitude Float?
+}
+
+model Order {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  orderNumber String @unique
+  userId      String @db.ObjectId
+  user        User   @relation(fields: [userId], references: [id])
+
+  status        OrderStatus   @default(PENDING_PAYMENT)
+  paymentStatus PaymentStatus @default(PENDING)
+  totalAmount   Float
+  shippingCost  Float
+
+  paymentMethod   String
+  shippingAddress AddressDetails
+
+  items OrderItem[]
+
+  paymentTransaction PaymentTransaction?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  productId String @db.ObjectId
+
+  productName     String
+  priceAtPurchase Float
+  quantity        Int
+
+  orderId String @db.ObjectId
+  order   Order  @relation(fields: [orderId], references: [id])
+}
+
+model PaymentTransaction {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  orderId String @unique @db.ObjectId
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  gateway               String?
+  externalTransactionId String?
+  midtransSnapToken     String?
+
+  paymentStatus PaymentStatus @default(PENDING)
+  amount        Float
+
+  paymentMethodDetails Json?
+  webhookLog           Json[]
+  paidAt               DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  name        String  @unique
+  slug        String  @unique
+  description String?
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  rating     Int
+  comment    String
+  isApproved Boolean  @default(false)
+  mediaUrls  String[]
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  productId String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  recipientName String
+  phone         String
+  label         String?
+  isPrimary     Boolean @default(false)
+
+  fullAddress String
+  subdistrict String
+  district    String
+  city        String
+  province    String
+  postalCode  String
+
+  latitude  Float?
+  longitude Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
