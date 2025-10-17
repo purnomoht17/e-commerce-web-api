@@ -141,7 +141,7 @@ model Order {
   totalAmount   Float
   shippingCost  Float
 
-  paymentMethod   String
+  paymentMethod   PaymentMethodType
   shippingAddress AddressDetails
 
   items OrderItem[]
@@ -163,6 +163,12 @@ model OrderItem {
 
   orderId String @db.ObjectId
   order   Order  @relation(fields: [orderId], references: [id])
+}
+
+enum PaymentMethodType {
+  CASH_ON_DELIVERY
+  MIDTRANS_SNAP
+  BANK_TRANSFER
 }
 
 model PaymentTransaction {
